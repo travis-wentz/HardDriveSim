@@ -14,32 +14,40 @@ public class HardDriveSim {
 	 * 
 	 */
 	protected static void fCFS(int[][] requests){
+		double curTime = 0;
 		int curTrack = 0;
 		int curSector = 0;
-		double T = 0;
+		double trackTime = 0;
+		double sectorTime = 0;
 		double turnaround = 0;
 		double finishTime = 0;
-		int nextSector = 0;
 		double[][] times = new double[requests.length][2]; //stores turnaround time and finish time for each request
 		
 		for(int i = 0; i < requests.length; i++){
 			//find time to next track
-			T = Math.abs(curTrack - requests[i][1]);
-			turnaround = 10 + 0.1 * T;
+			trackTime = 10 + 0.1 * (Math.abs(curTrack - requests[i][1]));
 			//find time to next sector
-			nextSector = requests[i][2];
-			if(nextSector > curSector){
-				turnaround += nextSector - curSector;
-			} else if (nextSector < curSector){
-				turnaround += 8 - curSector + nextSector;
+			if(requests[i][2] > curSector){
+				sectorTime = requests[i][2] - curSector;
+			} else if (requests[i][2] < curSector){
+				sectorTime = 8 - curSector + requests[i][2];
 			}
-			finishTime += turnaround;
+			System.out.print(sectorTime + "   ");
+			//find finish time
+			if(requests[i][0] > curTime){
+				finishTime = (requests[i][0] + trackTime + sectorTime);
+			} else {
+				finishTime = (curTime + trackTime + sectorTime);
+			}
+			turnaround = finishTime - requests[i][0];
 			times[i][0] = turnaround;
 			times[i][1] = finishTime;
+			curTime = finishTime;
 			curTrack = requests[i][1];
 			curSector = requests[i][2];
 		}
-		
+		System.out.println("-----------------------------------");
+		print(times);
 		stats("FCFS", times);
 	}
 	
@@ -83,27 +91,36 @@ public class HardDriveSim {
 		return requests;
 	}
 	
-	protected static void print(int[][] array){
+	protected static void print(double[][] array){
 		for(int i = 0; i < array.length; i++){
 			for(int j = 0; j < array[0].length; j++){
 				System.out.print(array[i][j] + "      ");
 			}
 			System.out.println();
 		}
-		//System.out.println("-------------------------------");
 	}
 	
 	protected static void stats(String name, double[][] times){
 		double avgTurnaround = 0;
 		double avgFinish = 0;
+		double variance = 0;
+		double stdDev;
 		for(int i = 0; i < times.length; i++){
 			avgTurnaround += times[i][0];
 			avgFinish += times[i][1];
+			variance += times[i][0] * times[i][0];
 		}
 		avgTurnaround /= times.length;
 		avgFinish /= times.length;
-		
+		variance /= times.length;
+		stdDev = Math.sqrt(variance);
+
+		System.out.println("---------------------------------------------------");
+		System.out.println(name + " total time: " + times[(times.length - 1)][1]);
 		System.out.println(name + " average turnaround time: " + avgTurnaround);
 		System.out.println(name + " average finish time: " + avgFinish);
+		System.out.println(name + " variance: " + variance);
+		System.out.println(name + " standard deviation: " + stdDev);
+		System.out.println("---------------------------------------------------");
 	}
 }

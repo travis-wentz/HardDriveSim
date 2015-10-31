@@ -17,8 +17,6 @@ public class Driver {
 		};
 		//HardDriveSim.print(hisRequests);
 		
-		System.out.println("--------------------------");
-		
 		HardDriveSim.fCFS(hisRequests);
 		
 		requests = HardDriveSim.createRandomRequests(50);
