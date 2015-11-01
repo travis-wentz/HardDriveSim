@@ -1,5 +1,7 @@
 package wentzHW03;
 
+import java.util.ArrayList;
+
 /*
  * Simulates different algorithms for servicing requests. Requests are in the form of a multi-dimensional array
  * where the first column is arrival time, second col is track requested, third col is sector requested.
@@ -14,15 +16,16 @@ public class HardDriveSim {
 	 * 
 	 */
 	protected static void fCFS(int[][] requests){
-		double curTime = 0;
 		int curTrack = 0;
 		int curSector = 0;
+		double curTime = 0;
 		double trackTime = 0;
 		double sectorTime = 0;
 		double turnaround = 0;
 		double finishTime = 0;
 		double[][] times = new double[requests.length][2]; //stores turnaround time and finish time for each request
 		
+		curTime = requests[0][0]; //waiting for the first job
 		for(int i = 0; i < requests.length; i++){
 			//find time to next track
 			trackTime = 10 + 0.1 * (Math.abs(curTrack - requests[i][1]));
@@ -32,7 +35,6 @@ public class HardDriveSim {
 			} else if (requests[i][2] < curSector){
 				sectorTime = 8 - curSector + requests[i][2];
 			}
-			System.out.print(sectorTime + "   ");
 			//find finish time
 			if(requests[i][0] > curTime){
 				finishTime = (requests[i][0] + trackTime + sectorTime);
@@ -46,9 +48,91 @@ public class HardDriveSim {
 			curTrack = requests[i][1];
 			curSector = requests[i][2];
 		}
-		System.out.println("-----------------------------------");
-		print(times);
 		stats("FCFS", times);
+	}
+	
+	/*
+	 * Shortest-seek-time-first finds the closest request and serves it.
+	 */
+	protected static void sSTF(int[][] req){
+		boolean done = false;
+		int finJobs = 0;
+		int curTrack = 0;
+		int curSector = 0;
+		int winningId = 0;
+		double curTime = 0;
+		double trackTime = 0;
+		double sectorTime = 0;
+		double turnaround = 0;
+		double finishTime = 0;
+//		int[][] requests = new int[req.length][4]; //copy of req with additional col for index and for 'serviced' flag
+		ArrayList<Request> requests = new ArrayList<Request>();
+		ArrayList<Request> buffer = new ArrayList<Request>();
+		double[][] times = new double[req.length][2]; //stores turnaround time and finish time for each request
+		
+		for(int i = 0; i < req.length; i++){
+			Request requ = new Request(i, req[i][0], req[i][1], req[i][2]);
+			requests.add(i, requ);
+		}
+		
+		curTime = req[0][0]; //waiting for first request
+		while(!done){
+			double bestTime = 5000000;
+			//add current requests to buffer
+			int element = 0;
+			for(int j = 0; j < requests.size(); j++){
+				if(!requests.get(element).inBuffer()){
+					requests.get(element).addToBuffer();
+					buffer.add(requests.get(element));
+				}
+				if((element + 1) < requests.size()){
+					element++;
+				}
+			}
+			
+			//find closest request
+			for(int j = 0; j < buffer.size(); j++){
+				Request curReq = buffer.get(j);
+				//find time to next track
+				trackTime = 10 + 0.1 * (Math.abs(curTrack - curReq.getTrack()));
+				//find time to next sector
+				if(curReq.getSector() > curSector){
+					sectorTime = curReq.getSector() - curSector;
+				} else if (curReq.getSector() < curSector){
+					sectorTime = 8 - curSector + curReq.getSector();
+				}
+				if(trackTime + sectorTime < bestTime){
+					bestTime = trackTime + sectorTime;
+					winningId = curReq.getId();
+				}
+			}
+			finishTime = curTime + bestTime;
+			turnaround = finishTime - requests.get(winningId).getArrival();
+			times[finJobs][0] = turnaround;
+			times[finJobs][1] = finishTime;
+			curTime = finishTime;
+			curTrack = requests.get(winningId).getTrack();
+			curSector = requests.get(winningId).getSector();
+			//delete job from buffer
+			for(int j = 0; j < buffer.size(); j++){
+				if(buffer.get(j).getId() == winningId){
+					buffer.remove(j);
+				}
+			}
+			finJobs++;
+			if(finJobs >= requests.size()){
+				done = true;
+			}
+		}
+		stats("SSTF", times);
+	}
+	
+	protected static void look(int[][] requests){
+		
+	}
+	
+	protected static void cLook(int[][] requests){
+		
 	}
 	
 	/*
