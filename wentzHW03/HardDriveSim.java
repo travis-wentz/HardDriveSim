@@ -65,11 +65,11 @@ public class HardDriveSim {
 		double sectorTime = 0;
 		double turnaround = 0;
 		double finishTime = 0;
-//		int[][] requests = new int[req.length][4]; //copy of req with additional col for index and for 'serviced' flag
 		ArrayList<Request> requests = new ArrayList<Request>();
 		ArrayList<Request> buffer = new ArrayList<Request>();
 		double[][] times = new double[req.length][2]; //stores turnaround time and finish time for each request
-		
+
+		//creating request objects and adding them to an array list
 		for(int i = 0; i < req.length; i++){
 			Request requ = new Request(i, req[i][0], req[i][1], req[i][2]);
 			requests.add(i, requ);
@@ -79,14 +79,10 @@ public class HardDriveSim {
 		while(!done){
 			double bestTime = 5000000;
 			//add current requests to buffer
-			int element = 0;
 			for(int j = 0; j < requests.size(); j++){
-				if(!requests.get(element).inBuffer()){
-					requests.get(element).addToBuffer();
-					buffer.add(requests.get(element));
-				}
-				if((element + 1) < requests.size()){
-					element++;
+				if(!requests.get(j).inBuffer()){
+					requests.get(j).addToBuffer();
+					buffer.add(requests.get(j));
 				}
 			}
 			
@@ -127,12 +123,220 @@ public class HardDriveSim {
 		stats("SSTF", times);
 	}
 	
-	protected static void look(int[][] requests){
+	/*
+	 * Look moves one direction as long as there are requests that way, then reverses when there are not
+	 */
+	protected static void look(int[][] req){
+		boolean done = false;
+		boolean movingRight = true;
+		int finJobs = 0;
+		int curTrack = 0;
+		int curSector = 0;
+		int winningId = 0;
+		double curTime = 0;
+		double trackTime = 0;
+		double sectorTime = 0;
+		double turnaround = 0;
+		double finishTime = 0;
+		Request curReq;
+		ArrayList<Request> requests = new ArrayList<Request>();
+		ArrayList<Request> buffer = new ArrayList<Request>();
+		double[][] times = new double[req.length][2]; //stores turnaround time and finish time for each request
+
+		//creating request objects and adding them to an array list
+		for(int i = 0; i < req.length; i++){
+			Request requ = new Request(i, req[i][0], req[i][1], req[i][2]);
+			requests.add(i, requ);
+		}
 		
+		curTime = req[0][0]; //waiting for first request
+		while(!done){
+			//add current requests to buffer
+			for(int j = 0; j < requests.size(); j++){
+				if(!requests.get(j).inBuffer()){
+					requests.get(j).addToBuffer();
+					buffer.add(requests.get(j));
+				}
+			}
+			//decide direction
+			if(movingRight){
+				boolean keepRight = false;
+				for(int j = 0; j < buffer.size(); j++){
+					if(buffer.get(j).getTrack() >= curTrack){
+						keepRight = true;
+					}
+				}
+				if(!keepRight){
+					movingRight = false;
+				}
+			} else {
+				boolean keepLeft = false;
+				for(int j = 0; j < buffer.size(); j++){
+					if(buffer.get(j).getTrack() <= curTrack){
+						keepLeft = true;
+					}
+				}
+				if(!keepLeft){
+					movingRight = true;
+				}
+			}
+			int trackDist = 5000000;
+			//find next request in correct direction
+			if(movingRight){
+				for(int j = 0; j < buffer.size(); j++){
+					curReq = buffer.get(j);
+					//if request is to the right
+					if(curReq.getTrack() > curTrack){
+						//find time to next track
+						if((curReq.getTrack() - curTrack) < trackDist){
+							trackDist = curReq.getTrack() - curTrack;
+							winningId = curReq.getId();
+						}
+					}
+				}
+			} else {
+				for(int j = 0; j < buffer.size(); j++){
+					curReq = buffer.get(j);
+					//if request is to the left
+					if(curReq.getTrack() < curTrack){
+						//find time to next track
+						if((curTrack - curReq.getTrack()) < trackDist){
+							trackDist = curTrack - curReq.getTrack();
+							winningId = curReq.getId();
+						}
+					}
+				}
+			}
+			curReq = requests.get(winningId);
+			//find time to next track
+			trackTime = 10 + 0.1 * (Math.abs(curTrack - curReq.getTrack()));
+			//find time to next sector
+			if(curReq.getSector() > curSector){
+				sectorTime = curReq.getSector() - curSector;
+			} else if (curReq.getSector() < curSector){
+				sectorTime = 8 - curSector + curReq.getSector();
+			}
+			finishTime = curTime + trackTime + sectorTime;
+			turnaround = finishTime - curReq.getArrival();
+			times[finJobs][0] = turnaround;
+			times[finJobs][1] = finishTime;
+			curTime = finishTime;
+			curTrack = requests.get(winningId).getTrack();
+			curSector = requests.get(winningId).getSector();
+			//delete job from buffer
+			for(int j = 0; j < buffer.size(); j++){
+				if(buffer.get(j).getId() == winningId){
+					buffer.remove(j);
+				}
+			}
+			finJobs++;
+			if(finJobs >= requests.size()){
+				done = true;
+			}
+		}
+		stats("LOOK", times);
 	}
 	
-	protected static void cLook(int[][] requests){
+	/*
+	 * Similar to look except that it only reads while moving to the right (that is, toward larger numbered tracks)
+	 */
+	protected static void cLook(int[][] req){
+		boolean done = false;
+		boolean movingRight = true;
+		int finJobs = 0;
+		int curTrack = 0;
+		int curSector = 0;
+		int winningId = 0;
+		double curTime = 0;
+		double trackTime = 0;
+		double sectorTime = 0;
+		double turnaround = 0;
+		double finishTime = 0;
+		Request curReq;
+		ArrayList<Request> requests = new ArrayList<Request>();
+		ArrayList<Request> buffer = new ArrayList<Request>();
+		double[][] times = new double[req.length][2]; //stores turnaround time and finish time for each request
 		
+		//creating request objects and adding them to an array list
+		for(int i = 0; i < req.length; i++){
+			Request requ = new Request(i, req[i][0], req[i][1], req[i][2]);
+			requests.add(i, requ);
+		}
+		
+		curTime = req[0][0]; //waiting for first request
+		while(!done){
+			//add current requests to buffer
+			for(int j = 0; j < requests.size(); j++){
+				if(!requests.get(j).inBuffer()){
+					requests.get(j).addToBuffer();
+					buffer.add(requests.get(j));
+				}
+			}
+			//decide direction
+			if(movingRight){
+				boolean keepRight = false;
+				for(int j = 0; j < buffer.size(); j++){
+					if(buffer.get(j).getTrack() >= curTrack){
+						keepRight = true;
+					}
+				}
+				if(!keepRight){
+					movingRight = false;
+				}
+			}
+			int trackDist = 5000000;
+			//find next request in correct direction
+			if(movingRight){
+				for(int j = 0; j < buffer.size(); j++){
+					curReq = buffer.get(j);
+					//if request is to the right
+					if(curReq.getTrack() > curTrack){
+						//find time to next track
+						if((curReq.getTrack() - curTrack) < trackDist){
+							trackDist = curReq.getTrack() - curTrack;
+							winningId = curReq.getId();
+						}
+					}
+				}
+			} else {
+				//find smallest track
+				int smTrack = 50000;
+				for(int j = 0; j < buffer.size(); j++){
+					curReq = buffer.get(j);
+					if(curReq.getTrack() < smTrack){
+						smTrack = curReq.getTrack();
+						winningId = curReq.getId();
+					}
+				}
+			}
+			curReq = requests.get(winningId);
+			//find time to next track
+			trackTime = 10 + 0.1 * (Math.abs(curTrack - curReq.getTrack()));
+			//find time to next sector
+			if(curReq.getSector() > curSector){
+				sectorTime = curReq.getSector() - curSector;
+			} else if (curReq.getSector() < curSector){
+				sectorTime = 8 - curSector + curReq.getSector();
+			}
+			finishTime = curTime + trackTime + sectorTime;
+			turnaround = finishTime - curReq.getArrival();
+			times[finJobs][0] = turnaround;
+			times[finJobs][1] = finishTime;
+			curTime = finishTime;
+			curTrack = requests.get(winningId).getTrack();
+			curSector = requests.get(winningId).getSector();
+			//delete job from buffer
+			for(int j = 0; j < buffer.size(); j++){
+				if(buffer.get(j).getId() == winningId){
+					buffer.remove(j);
+				}
+			}
+			finJobs++;
+			if(finJobs >= requests.size()){
+				done = true;
+			}
+		}
+		stats("C-LOOK", times);
 	}
 	
 	/*
@@ -192,10 +396,12 @@ public class HardDriveSim {
 		for(int i = 0; i < times.length; i++){
 			avgTurnaround += times[i][0];
 			avgFinish += times[i][1];
-			variance += times[i][0] * times[i][0];
 		}
 		avgTurnaround /= times.length;
 		avgFinish /= times.length;
+		for(int i = 0; i < times.length; i++){
+			variance += Math.pow(avgTurnaround - times[i][0],2);
+		}
 		variance /= times.length;
 		stdDev = Math.sqrt(variance);
 

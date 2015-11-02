@@ -19,6 +19,8 @@ public class Driver {
 		System.out.println("For Given Data:");
 		HardDriveSim.fCFS(hisRequests);
 		HardDriveSim.sSTF(hisRequests);
+		HardDriveSim.look(hisRequests);
+		HardDriveSim.cLook(hisRequests);
 		
 		requests = HardDriveSim.createRandomRequests(50);
 		System.out.println();
@@ -26,5 +28,7 @@ public class Driver {
 		System.out.println("For Randomly Generated Data:");
 		HardDriveSim.fCFS(requests);
 		HardDriveSim.sSTF(requests);
+		HardDriveSim.look(requests);
+		HardDriveSim.cLook(requests);
 	}
 }
